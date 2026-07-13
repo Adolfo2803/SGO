@@ -1,0 +1,31 @@
+# --- Java ---
+*.class
+*.jar
+*.war
+*.ear
+
+# --- Maven ---
+target/
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iml
+out/
+
+# --- Eclipse ---
+.classpath
+.project
+.settings/
+
+# --- VS Code ---
+.vscode/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Entorno ---
+.env
+
+# --- Archivos subidos (PDFs) ---
+uploads/

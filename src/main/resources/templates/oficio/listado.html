@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout :: head('Consulta de Oficios')}"></head>
+<body class="bg-light">
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<div class="container">
+    <h2 class="mb-3">Consulta de Oficios</h2>
+
+    <form th:action="@{/oficios}" th:object="${filtro}" method="get" class="card card-body mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="fechaDesde" class="form-label">Fecha desde</label>
+                <input type="date" id="fechaDesde" th:field="*{fechaDesde}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="fechaHasta" class="form-label">Fecha hasta</label>
+                <input type="date" id="fechaHasta" th:field="*{fechaHasta}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="direccion" class="form-label">Dirección</label>
+                <select id="direccion" th:field="*{direccion}" class="form-select">
+                    <option value="">Todas</option>
+                    <option th:each="d : ${direcciones}" th:value="${d}" th:text="${d}"></option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="estado" class="form-label">Estado</label>
+                <select id="estado" th:field="*{estado}" class="form-select">
+                    <option value="">Todos</option>
+                    <option th:each="e : ${estados}" th:value="${e}" th:text="${e}"></option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="texto" class="form-label">Buscar en folio, remitente o asunto</label>
+                <input type="text" id="texto" th:field="*{texto}" class="form-control"
+                       placeholder="Texto libre...">
+            </div>
+            <div class="col-md-4">
+                <label for="areaId" class="form-label">Área turnada</label>
+                <select id="areaId" th:field="*{areaId}" class="form-select">
+                    <option value="">Todas</option>
+                    <option th:each="a : ${areas}" th:value="${a.id}" th:text="${a.nombre}"></option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+                <a th:href="@{/oficios}" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+        </div>
+    </form>
+
+    <div th:if="${pagina.totalElements == 0}" class="alert alert-info">
+        No se encontraron oficios con los filtros seleccionados.
+    </div>
+
+    <div th:if="${pagina.totalElements > 0}">
+        <p class="text-muted mb-2">
+            <span th:text="${pagina.totalElements}"></span> oficio(s) encontrado(s).
+            Página <span th:text="${pagina.number + 1}"></span>
+            de <span th:text="${pagina.totalPages}"></span>.
+        </p>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>Folio</th>
+                    <th>Fecha</th>
+                    <th>Dirección</th>
+                    <th>Remitente</th>
+                    <th>Asunto</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="oficio : ${pagina.content}">
+                    <td>
+                        <a th:href="@{/oficios/{id}(id=${oficio.id})}"
+                           th:text="${oficio.folio}" class="folio-mono"></a>
+                    </td>
+                    <td th:text="${#temporals.format(oficio.fecha, 'dd/MM/yyyy')}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${oficio.direccion.name() == 'ENTRADA'} ? 'bg-info text-dark' : 'bg-warning text-dark'"
+                              th:text="${oficio.direccion}"></span>
+                    </td>
+                    <td th:text="${oficio.remitente}"></td>
+                    <td>
+                        <span th:title="${oficio.asunto}"
+                              th:text="${#strings.abbreviate(oficio.asunto, 60)}"></span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${oficio.estado.name() == 'RECIBIDO'} ? 'bg-secondary' : (${oficio.estado.name() == 'TURNADO'} ? 'bg-success' : 'bg-dark')"
+                              th:text="${oficio.estado}"></span>
+                    </td>
+                    <td>
+                        <a th:if="${oficio.rutaArchivo != null}"
+                           th:href="@{/oficios/{id}/archivo(id=${oficio.id})}"
+                           class="btn btn-sm btn-outline-primary" target="_blank"
+                           title="Ver PDF">PDF</a>
+                        <span th:if="${oficio.rutaArchivo == null}" class="text-muted">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <nav th:if="${pagina.totalPages > 1}" aria-label="Paginación de oficios">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/oficios(page=${pagina.number - 1},
+                           fechaDesde=${filtro.fechaDesde},
+                           fechaHasta=${filtro.fechaHasta},
+                           direccion=${filtro.direccion},
+                           estado=${filtro.estado},
+                           texto=${filtro.texto},
+                           areaId=${filtro.areaId})}">Anterior</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, pagina.totalPages - 1)}"
+                    th:classappend="${i == pagina.number} ? 'active'">
+                    <a class="page-link"
+                       th:href="@{/oficios(page=${i},
+                           fechaDesde=${filtro.fechaDesde},
+                           fechaHasta=${filtro.fechaHasta},
+                           direccion=${filtro.direccion},
+                           estado=${filtro.estado},
+                           texto=${filtro.texto},
+                           areaId=${filtro.areaId})}"
+                       th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                    <a class="page-link"
+                       th:href="@{/oficios(page=${pagina.number + 1},
+                           fechaDesde=${filtro.fechaDesde},
+                           fechaHasta=${filtro.fechaHasta},
+                           direccion=${filtro.direccion},
+                           estado=${filtro.estado},
+                           texto=${filtro.texto},
+                           areaId=${filtro.areaId})}">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<footer th:replace="~{layout :: footer}"></footer>
+<th:block th:replace="~{layout :: scripts}"></th:block>
+</body>
+</html>

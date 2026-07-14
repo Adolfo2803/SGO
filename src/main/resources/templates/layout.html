@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+
+<head th:fragment="head(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${titulo} + ' — SGO'">SGO</title>
+    <link th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}" rel="stylesheet">
+    <link th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <link th:href="@{/css/sgo.css}" rel="stylesheet">
+</head>
+
+<body>
+
+<nav th:fragment="navbar" class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand mb-0 h1" th:href="@{/oficios}">SGO</a>
+        <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-outline-light btn-sm" th:href="@{/oficios}">Consulta</a>
+            <a class="btn btn-outline-light btn-sm" th:href="@{/oficios/nuevo}">+ Entrada</a>
+            <a class="btn btn-outline-light btn-sm" th:href="@{/oficios/salida/nuevo}">+ Salida</a>
+            <span class="text-light small ms-2" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="mb-0">
+                <button type="submit" class="btn btn-outline-light btn-sm">Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div th:fragment="mensajes">
+    <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${mensaje}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<footer th:fragment="footer" class="text-center text-muted small py-4">
+    Hospital General — Dirección
+</footer>
+
+<th:block th:fragment="scripts">
+    <script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+</th:block>
+
+</body>
+</html>

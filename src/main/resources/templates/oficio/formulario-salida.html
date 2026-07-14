@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout :: head('Registrar Oficio de Salida')}"></head>
+<body class="bg-light">
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<div class="container form-container">
+    <h2 class="mb-4">Registrar Oficio de Salida</h2>
+
+    <div th:if="${folioGenerado}" class="alert alert-success text-center" role="alert">
+        <p th:text="${mensaje}" class="mb-1"></p>
+        <p class="display-5 fw-bold folio-mono mb-0" th:text="${folioGenerado}"></p>
+        <small class="text-muted">Anote este folio en el documento físico.</small>
+    </div>
+
+    <div th:if="${mensaje != null && folioGenerado == null}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${mensaje}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <form th:action="@{/oficios/salida}" th:object="${salidaForm}" method="post"
+          enctype="multipart/form-data" novalidate>
+
+        <div class="mb-3">
+            <label class="form-label">Folio</label>
+            <input type="text" class="form-control" disabled
+                   placeholder="Se generará automáticamente al guardar">
+        </div>
+
+        <div class="mb-3">
+            <label for="fecha" class="form-label">Fecha del oficio <span class="text-danger">*</span></label>
+            <input type="date" id="fecha" th:field="*{fecha}"
+                   class="form-control" th:classappend="${#fields.hasErrors('fecha')} ? 'is-invalid'">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('fecha')}" th:errors="*{fecha}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="destinatario" class="form-label">Destinatario <span class="text-danger">*</span></label>
+            <input type="text" id="destinatario" th:field="*{destinatario}"
+                   class="form-control" th:classappend="${#fields.hasErrors('destinatario')} ? 'is-invalid'"
+                   placeholder="A quién se dirige el oficio">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('destinatario')}" th:errors="*{destinatario}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="asunto" class="form-label">Asunto <span class="text-danger">*</span></label>
+            <textarea id="asunto" th:field="*{asunto}" rows="3"
+                      class="form-control" th:classappend="${#fields.hasErrors('asunto')} ? 'is-invalid'"
+                      placeholder="Descripción breve del contenido del oficio"></textarea>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}"></div>
+        </div>
+
+        <div class="mb-4">
+            <label for="archivo" class="form-label">Archivo PDF escaneado <span class="text-danger">*</span></label>
+            <input type="file" id="archivo" name="archivo" accept=".pdf" class="form-control">
+            <div class="form-text">Solo archivos PDF, máximo 10 MB.</div>
+        </div>
+
+        <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">Registrar oficio de salida</button>
+        </div>
+    </form>
+</div>
+
+<footer th:replace="~{layout :: footer}"></footer>
+<th:block th:replace="~{layout :: scripts}"></th:block>
+</body>
+</html>

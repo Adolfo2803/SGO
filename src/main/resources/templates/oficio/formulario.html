@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout :: head('Registrar Oficio de Entrada')}"></head>
+<body class="bg-light">
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<div class="container form-container">
+    <h2 class="mb-4">Registrar Oficio de Entrada</h2>
+
+    <div th:replace="~{layout :: mensajes}"></div>
+
+    <form th:action="@{/oficios}" th:object="${oficioForm}" method="post"
+          enctype="multipart/form-data" novalidate>
+
+        <div class="mb-3">
+            <label for="folio" class="form-label">Folio <span class="text-danger">*</span></label>
+            <input type="text" id="folio" th:field="*{folio}"
+                   class="form-control" th:classappend="${#fields.hasErrors('folio')} ? 'is-invalid'"
+                   placeholder="Ej. SSA/DG/2026/0123">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('folio')}" th:errors="*{folio}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="fecha" class="form-label">Fecha del oficio <span class="text-danger">*</span></label>
+            <input type="date" id="fecha" th:field="*{fecha}"
+                   class="form-control" th:classappend="${#fields.hasErrors('fecha')} ? 'is-invalid'">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('fecha')}" th:errors="*{fecha}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="remitente" class="form-label">Remitente <span class="text-danger">*</span></label>
+            <input type="text" id="remitente" th:field="*{remitente}"
+                   class="form-control" th:classappend="${#fields.hasErrors('remitente')} ? 'is-invalid'"
+                   placeholder="Nombre o dependencia que emite el oficio">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('remitente')}" th:errors="*{remitente}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="destinatario" class="form-label">Destinatario <span class="text-danger">*</span></label>
+            <input type="text" id="destinatario" th:field="*{destinatario}"
+                   class="form-control" th:classappend="${#fields.hasErrors('destinatario')} ? 'is-invalid'"
+                   placeholder="A quién va dirigido el oficio">
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('destinatario')}" th:errors="*{destinatario}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="asunto" class="form-label">Asunto <span class="text-danger">*</span></label>
+            <textarea id="asunto" th:field="*{asunto}" rows="3"
+                      class="form-control" th:classappend="${#fields.hasErrors('asunto')} ? 'is-invalid'"
+                      placeholder="Descripción breve del contenido del oficio"></textarea>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('asunto')}" th:errors="*{asunto}"></div>
+        </div>
+
+        <div class="mb-4">
+            <label for="archivo" class="form-label">Archivo PDF escaneado <span class="text-danger">*</span></label>
+            <input type="file" id="archivo" name="archivo" accept=".pdf"
+                   class="form-control">
+            <div class="form-text">Solo archivos PDF, máximo 10 MB.</div>
+        </div>
+
+        <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">Registrar oficio</button>
+        </div>
+    </form>
+</div>
+
+<footer th:replace="~{layout :: footer}"></footer>
+<th:block th:replace="~{layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout :: head('Oficio ' + ${oficio.folio})}"></head>
+<body class="bg-light">
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<div class="container detail-container">
+
+    <div th:replace="~{layout :: mensajes}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Oficio <span class="folio-mono" th:text="${oficio.folio}"></span></h2>
+        <a th:href="@{/oficios}" class="btn btn-outline-secondary btn-sm">Volver al listado</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Folio:</strong> <span class="folio-mono" th:text="${oficio.folio}"></span></p>
+                    <p><strong>Fecha:</strong> <span th:text="${#temporals.format(oficio.fecha, 'dd/MM/yyyy')}"></span></p>
+                    <p><strong>Dirección:</strong>
+                        <span class="badge"
+                              th:classappend="${oficio.direccion.name() == 'ENTRADA'} ? 'bg-info text-dark' : 'bg-warning text-dark'"
+                              th:text="${oficio.direccion}"></span>
+                    </p>
+                    <p><strong>Estado:</strong>
+                        <span class="badge"
+                              th:classappend="${oficio.estado.name() == 'RECIBIDO'} ? 'bg-secondary' : (${oficio.estado.name() == 'TURNADO'} ? 'bg-success' : 'bg-dark')"
+                              th:text="${oficio.estado}"></span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Remitente:</strong> <span th:text="${oficio.remitente}"></span></p>
+                    <p><strong>Destinatario:</strong> <span th:text="${oficio.destinatario}"></span></p>
+                    <p><strong>Asunto:</strong> <span th:text="${oficio.asunto}"></span></p>
+                    <p th:if="${oficio.rutaArchivo != null}">
+                        <a th:href="@{/oficios/{id}/archivo(id=${oficio.id})}"
+                           class="btn btn-sm btn-outline-primary" target="_blank">Ver PDF adjunto</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${!areasDisponibles.isEmpty()}" class="card mb-4">
+        <div class="card-header"><strong>Turnar a áreas</strong></div>
+        <div class="card-body">
+            <form th:action="@{/oficios/{id}/turnar(id=${oficio.id})}" method="post">
+                <div class="row">
+                    <div th:each="area : ${areasDisponibles}" class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="areaIds" th:value="${area.id}" th:id="'area-' + ${area.id}">
+                            <label class="form-check-label" th:for="'area-' + ${area.id}">
+                                <span th:text="${area.nombre}"></span>
+                                <small class="text-muted" th:text="'(' + ${area.correo} + ')'"></small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Turnar</button>
+            </form>
+        </div>
+    </div>
+
+    <div th:if="${!turnados.isEmpty()}" class="card mb-4">
+        <div class="card-header"><strong>Historial de turnado</strong></div>
+        <div class="card-body p-0">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Área</th>
+                    <th>Correo</th>
+                    <th>Estado</th>
+                    <th>Intentos</th>
+                    <th>Enviado</th>
+                    <th>Error</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${turnados}">
+                    <td th:text="${t.area.nombre}"></td>
+                    <td th:text="${t.area.correo}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${t.estado.name() == 'ENVIADO'} ? 'bg-success' : (${t.estado.name() == 'PENDIENTE'} ? 'bg-warning text-dark' : 'bg-danger')"
+                              th:text="${t.estado}"></span>
+                    </td>
+                    <td th:text="${t.intentos}"></td>
+                    <td th:text="${t.enviadoEn != null} ? ${#temporals.format(t.enviadoEn, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+                    <td>
+                        <small th:if="${t.ultimoError != null}" class="text-danger"
+                               th:text="${#strings.abbreviate(t.ultimoError, 80)}"></small>
+                        <span th:if="${t.ultimoError == null}">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<footer th:replace="~{layout :: footer}"></footer>
+<th:block th:replace="~{layout :: scripts}"></th:block>
+</body>
+</html>

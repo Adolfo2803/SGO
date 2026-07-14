@@ -1,0 +1,20 @@
+.login-wrapper {
+    min-height: 100vh;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+}
+
+.form-container {
+    max-width: 720px;
+}
+
+.detail-container {
+    max-width: 900px;
+}
+
+.folio-mono {
+    font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+}

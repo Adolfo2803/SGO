@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/sgo}
+    username: sgo
+    password: sgo_dev_2024
+  flyway:
+    clean-disabled: false
+  mail:
+    host: localhost
+    port: 3025
+
+sgo:
+  correo:
+    remitente: test@hospital.local

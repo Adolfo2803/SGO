@@ -2,7 +2,7 @@
 	local_certs
 }
 
-:443 {
+{$SGO_DOMINIO:localhost} {
 	tls internal
 
 	reverse_proxy app:8080

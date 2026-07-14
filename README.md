@@ -105,6 +105,18 @@ Copie `.env.example` a `.env` y edite cada variable. Las más importantes:
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Credenciales SMTP. |
 | `SGO_CORREO_REMITENTE` | Dirección "De:" en los correos de turnado. |
 
+### Salud de la aplicación (`/actuator/health`)
+
+El endpoint `/actuator/health` solo evalúa lo que es indispensable para operar:
+que la aplicación responda y que la base de datos esté accesible. **El correo
+SMTP no forma parte del health check.** Un servidor de correo inalcanzable no debe
+impedir que las secretarias registren y consulten oficios.
+
+Si el SMTP falla, los turnados quedan en estado `FALLIDO` (visible en el detalle
+de cada oficio). El job de reintentos los vuelve a intentar automáticamente.
+Para diagnosticar problemas de correo, revise los turnados fallidos en la
+interfaz o consulte los logs: `docker compose -f docker-compose.prod.yml logs -f app | grep FALLIDO`.
+
 ### Comandos de operación
 
 ```bash
@@ -124,18 +136,27 @@ docker compose -f docker-compose.prod.yml ps
 ### Respaldo
 
 El script `scripts/respaldo.sh` respalda la base de datos y los PDFs.
-Conserva los últimos 30 días y elimina los anteriores.
+Conserva los últimos 30 días y elimina los anteriores. No requiere root.
+
+Solo necesita que el contenedor `db` esté corriendo; la aplicación puede estar
+detenida. El script carga `.env` automáticamente y valida todas las variables
+requeridas antes de empezar. Si algo falla, aborta sin dejar archivos parciales.
+
+**Importante:** el directorio de respaldos debe estar en un **disco distinto** al de los
+datos de la aplicación. Un respaldo en el mismo disco no protege contra la falla más
+común: que el disco muera. Idealmente, copie los respaldos fuera del servidor
+(a un NAS, a otra máquina, o a almacenamiento en la nube del hospital).
+
+La variable `SGO_RESPALDO_DIR` controla el destino (por defecto `$HOME/sgo-respaldos`).
 
 ```bash
-# Respaldo manual
-cd /ruta/al/SGO
-source .env
-./scripts/respaldo.sh /opt/sgo/respaldos
+# Respaldo manual (no requiere source .env, el script lo carga solo)
+/ruta/al/SGO/scripts/respaldo.sh
 
-# Agendar respaldo diario a las 2:00 AM con cron
+# Agendar respaldo diario a las 2:00 AM con cron (usuario normal, sin root)
 # Ejecutar: crontab -e
 # Agregar la línea:
-0 2 * * * cd /ruta/al/SGO && source .env && ./scripts/respaldo.sh /opt/sgo/respaldos >> /var/log/sgo-respaldo.log 2>&1
+0 2 * * * /ruta/al/SGO/scripts/respaldo.sh >> /ruta/al/SGO/respaldo.log 2>&1
 ```
 
 ### Restaurar desde un respaldo
@@ -145,13 +166,15 @@ source .env
 docker compose -f docker-compose.prod.yml stop app
 
 # 2. Restaurar la base de datos
-gunzip -c /opt/sgo/respaldos/sgo-db-2026-07-13_0200.sql.gz \
+gunzip -c ~/sgo-respaldos/sgo-db-2026-07-13_0200.sql.gz \
     | docker compose -f docker-compose.prod.yml exec -T db \
         psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
-# 3. Restaurar los PDFs
-docker compose -f docker-compose.prod.yml run --rm -v sgo-almacen:/data/almacen app \
-    tar xzf - -C /data/almacen < /opt/sgo/respaldos/sgo-archivos-2026-07-13_0200.tar.gz
+# 3. Restaurar los PDFs (usa el volumen directamente, no necesita app)
+#    Ajuste el nombre del volumen si su proyecto tiene otro prefijo.
+gunzip -c ~/sgo-respaldos/sgo-archivos-2026-07-13_0200.tar.gz \
+    | docker run --rm -i -v sgo_sgo-almacen:/data alpine:3 \
+        tar xf - -C /data
 
 # 4. Levantar la aplicación
 docker compose -f docker-compose.prod.yml up -d app
@@ -163,8 +186,7 @@ docker compose -f docker-compose.prod.yml up -d app
 cd /ruta/al/SGO
 
 # 1. Respaldar antes de actualizar
-source .env
-./scripts/respaldo.sh /opt/sgo/respaldos
+./scripts/respaldo.sh
 
 # 2. Obtener la nueva versión
 git pull origin main

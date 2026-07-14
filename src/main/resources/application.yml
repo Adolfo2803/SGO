@@ -89,6 +89,9 @@ spring:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
 
+server:
+  forward-headers-strategy: native
+
 logging:
   file:
     name: /app/logs/sgo.log

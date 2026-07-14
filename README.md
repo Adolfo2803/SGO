@@ -85,7 +85,7 @@ instale el certificado raíz de Caddy en los equipos cliente:
 ```bash
 # En el servidor, extraer el certificado raíz
 docker compose -f docker-compose.prod.yml exec caddy \
-    cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+    sh -c 'cat /data/caddy/pki/authorities/local/root.crt' > caddy-root.crt
 
 # Distribuir caddy-root.crt a los equipos de las secretarias e instalarlo:
 # - Windows: doble clic → Instalar certificado → Equipo local →
@@ -161,7 +161,22 @@ La variable `SGO_RESPALDO_DIR` controla el destino (por defecto `$HOME/sgo-respa
 
 ### Restaurar desde un respaldo
 
+> **Entorno asumido:** servidor Linux con Docker Engine, o Git Bash en Windows
+> con Docker Desktop (para pruebas). Los comandos usan `sh -c '...'` para que
+> las rutas internas del contenedor (`/data`) no sean alteradas por la
+> conversión de rutas de Git Bash. En Linux esto no tiene efecto; en Git Bash
+> es indispensable.
+>
+> Si el servidor de destino es Windows sin Docker, este procedimiento no aplica.
+> En ese caso la aplicación se ejecutaría como servicio (JAR + NSSM), PostgreSQL
+> sería nativo, y la restauración se haría con `pg_restore.exe` y una copia
+> directa de archivos.
+
 ```bash
+# 0. Cargar las variables de configuración
+cd /ruta/al/SGO
+source .env
+
 # 1. Detener la aplicación (la BD debe seguir corriendo)
 docker compose -f docker-compose.prod.yml stop app
 
@@ -173,8 +188,8 @@ gunzip -c ~/sgo-respaldos/sgo-db-2026-07-13_0200.sql.gz \
 # 3. Restaurar los PDFs (usa el volumen directamente, no necesita app)
 #    Ajuste el nombre del volumen si su proyecto tiene otro prefijo.
 gunzip -c ~/sgo-respaldos/sgo-archivos-2026-07-13_0200.tar.gz \
-    | docker run --rm -i -v sgo_sgo-almacen:/data alpine:3 \
-        tar xf - -C /data
+    | docker run --rm -i -v sgo_sgo-almacen://data alpine:3 \
+        sh -c 'tar xf - -C /data'
 
 # 4. Levantar la aplicación
 docker compose -f docker-compose.prod.yml up -d app

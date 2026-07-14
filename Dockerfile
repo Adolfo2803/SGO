@@ -10,7 +10,7 @@ FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S sgo && adduser -S sgo -G sgo
 WORKDIR /app
 COPY --from=build /build/target/app.jar app.jar
-RUN mkdir -p /app/logs && chown -R sgo:sgo /app
+RUN mkdir -p /app/logs /data/almacen && chown -R sgo:sgo /app /data/almacen
 USER sgo
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

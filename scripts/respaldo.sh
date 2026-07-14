@@ -8,25 +8,39 @@ set -euo pipefail
 # Solo requiere que el contenedor 'db' esté corriendo.
 # Los PDFs se respaldan desde el volumen Docker directamente,
 # sin necesidad de que la aplicación esté levantada.
+#
+# NOTA — Git Bash en Windows (MSYS2):
+#   Git Bash convierte automáticamente los argumentos que parecen
+#   rutas Unix (/data, /var/...) a rutas Windows cuando se pasan
+#   a ejecutables nativos como docker.exe. Eso rompe rutas que son
+#   INTERNAS del contenedor Linux y no deben convertirse.
+#   Este script usa dos defensas:
+#     - Rutas relativas para el compose file (no empiezan con /,
+#       Git Bash no las toca).
+#     - MSYS_NO_PATHCONV=1 como prefijo en los comandos docker que
+#       pasan rutas internas de contenedor (/data).
+#   NO se debe poner MSYS_NO_PATHCONV=1 de forma global: rompe
+#   la conversión de rutas del host que Docker sí necesita.
 # ============================================================
 
 DIRECTORIO_SGO="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$DIRECTORIO_SGO/docker-compose.prod.yml"
-ENV_FILE="$DIRECTORIO_SGO/.env"
+cd "$DIRECTORIO_SGO"
+
+COMPOSE_FILE="docker-compose.prod.yml"
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 # --- 1. Cargar .env -----------------------------------------------------------
 
-if [ ! -f "$ENV_FILE" ]; then
-    echo "ERROR: no se encontró $ENV_FILE" >&2
+if [ ! -f .env ]; then
+    echo "ERROR: no se encontró .env en $DIRECTORIO_SGO" >&2
     echo "Copie .env.example a .env y configure las variables antes de respaldar." >&2
     exit 1
 fi
 
 set -a
 # shellcheck source=/dev/null
-source "$ENV_FILE"
+source .env
 set +a
 
 # --- 2. Validar variables requeridas -----------------------------------------
@@ -40,7 +54,7 @@ for var in "${REQUERIDAS[@]}"; do
 done
 
 if [ ${#faltantes[@]} -gt 0 ]; then
-    echo "ERROR: faltan variables requeridas en $ENV_FILE:" >&2
+    echo "ERROR: faltan variables requeridas en .env:" >&2
     for var in "${faltantes[@]}"; do
         echo "  - $var" >&2
     done
@@ -53,7 +67,7 @@ if ! docker compose -f "$COMPOSE_FILE" exec -T db \
         pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1; then
     log "ERROR: la base de datos no está disponible." >&2
     log "Verifique que el contenedor 'db' esté corriendo:" >&2
-    log "  docker compose -f docker-compose.prod.yml up -d db" >&2
+    log "  docker compose -f $COMPOSE_FILE up -d db" >&2
     exit 1
 fi
 
@@ -62,7 +76,7 @@ VOLUMEN_PDF="${PROYECTO}_sgo-almacen"
 
 if ! docker volume inspect "$VOLUMEN_PDF" >/dev/null 2>&1; then
     log "ERROR: el volumen '$VOLUMEN_PDF' no existe." >&2
-    log "¿Se ha levantado alguna vez con docker compose -f docker-compose.prod.yml up?" >&2
+    log "¿Se ha levantado alguna vez con docker compose -f $COMPOSE_FILE up?" >&2
     exit 1
 fi
 
@@ -96,8 +110,11 @@ if [ ! -s "$DIR_TEMP/$ARCHIVO_DB" ]; then
 fi
 
 # --- 6. Respaldar PDFs (contenedor efímero; app NO necesita estar corriendo) --
+#    MSYS_NO_PATHCONV=1 evita que Git Bash convierta /data (ruta interna del
+#    contenedor Linux) a C:/Program Files/Git/data. En Linux no tiene efecto.
 
 log "2/3 Respaldando almacén de PDFs..."
+MSYS_NO_PATHCONV=1 \
 docker run --rm -v "${VOLUMEN_PDF}:/data:ro" alpine:3 \
     tar cf - -C /data . \
     | gzip > "$DIR_TEMP/$ARCHIVO_PDF"

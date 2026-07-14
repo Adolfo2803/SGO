@@ -36,7 +36,8 @@ class AlmacenArchivosLocalSecurityTest {
     @Test
     void cargar_pathTraversalConBackslash_lanzaExcepcion() {
         assertThatThrownBy(() -> almacen.cargar("..\\..\\application.yml"))
-                .isInstanceOf(SecurityException.class);
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("no permitido");
     }
 
     @Test

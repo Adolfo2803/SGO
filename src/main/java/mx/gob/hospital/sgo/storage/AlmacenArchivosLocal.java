@@ -52,6 +52,7 @@ public class AlmacenArchivosLocal implements AlmacenArchivos {
 
     @Override
     public Resource cargar(String rutaRelativa) {
+        validarRuta(rutaRelativa);
         Path archivo = raiz.resolve(rutaRelativa).normalize();
         if (!archivo.startsWith(raiz)) {
             throw new SecurityException("Acceso denegado: ruta fuera del almacén");
@@ -66,11 +67,19 @@ public class AlmacenArchivosLocal implements AlmacenArchivos {
     @Override
     public void eliminar(String rutaRelativa) {
         try {
+            validarRuta(rutaRelativa);
             Path archivo = raiz.resolve(rutaRelativa).normalize();
             if (archivo.startsWith(raiz)) {
                 Files.deleteIfExists(archivo);
             }
+        } catch (SecurityException ignored) {
         } catch (IOException ignored) {
+        }
+    }
+
+    private void validarRuta(String rutaRelativa) {
+        if (rutaRelativa.contains("\\")) {
+            throw new SecurityException("Acceso denegado: carácter no permitido en la ruta");
         }
     }
 }

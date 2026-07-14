@@ -5,13 +5,13 @@
 Sistema para registro, control y turnado de oficios recibidos y enviados
 en la Dirección del Hospital General.
 
-## Requisitos
+## Requisitos para desarrollo
 
 - Java 21
 - Docker (para la base de datos y las pruebas)
 - Maven (incluido via wrapper: `./mvnw`)
 
-## Cómo levantar el proyecto
+## Cómo levantar el proyecto (desarrollo)
 
 ```bash
 # 1. Base de datos
@@ -42,3 +42,136 @@ y en cada **pull request contra `main`**. Realiza lo siguiente:
 no compiló o tiene pruebas fallidas. Revisa la pestaña **Actions** del repositorio
 para ver el detalle del error y descarga el artefacto `reportes-pruebas` si necesitas
 los XML de Surefire.
+
+## Despliegue en el hospital
+
+### Requisitos del servidor
+
+- Linux (Ubuntu 22.04+ o similar)
+- Docker Engine 24+ y Docker Compose v2
+- 2 GB de RAM mínimo, 4 GB recomendado
+- Disco suficiente para los PDFs escaneados (~1 GB por cada 10,000 oficios)
+- Acceso a un servidor SMTP para el envío de correos de turnado
+
+### Instalación desde cero
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/Adolfo2803/SGO.git
+cd SGO
+
+# 2. Crear el archivo de configuración
+cp .env.example .env
+nano .env   # editar TODAS las variables con valores reales
+
+# 3. Construir y levantar
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 4. Verificar que todo esté sano
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs app --tail 50
+```
+
+La aplicación estará en `https://<ip-del-servidor>`.
+
+**Primer inicio de sesión:** usuario `admin`, contraseña la definida en `SGO_ADMIN_PASSWORD`.
+
+### Certificado HTTPS
+
+Caddy genera un certificado autofirmado (TLS interno). La primera vez que cada
+usuaria acceda, el navegador mostrará una advertencia de seguridad. Para evitarla,
+instale el certificado raíz de Caddy en los equipos cliente:
+
+```bash
+# En el servidor, extraer el certificado raíz
+docker compose -f docker-compose.prod.yml exec caddy \
+    cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+
+# Distribuir caddy-root.crt a los equipos de las secretarias e instalarlo:
+# - Windows: doble clic → Instalar certificado → Equipo local →
+#   Entidades de certificación raíz de confianza
+# - Linux: sudo cp caddy-root.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+```
+
+### Definir el .env
+
+Copie `.env.example` a `.env` y edite cada variable. Las más importantes:
+
+| Variable | Descripción |
+|---|---|
+| `POSTGRES_PASSWORD` | Contraseña de la base de datos. Use una larga y aleatoria. |
+| `SGO_ADMIN_PASSWORD` | Contraseña del usuario inicial. Solo se usa en el primer arranque. |
+| `MAIL_HOST` | Servidor SMTP del hospital. |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Credenciales SMTP. |
+| `SGO_CORREO_REMITENTE` | Dirección "De:" en los correos de turnado. |
+
+### Comandos de operación
+
+```bash
+# Levantar
+docker compose -f docker-compose.prod.yml up -d
+
+# Detener (conserva datos)
+docker compose -f docker-compose.prod.yml down
+
+# Ver logs en tiempo real
+docker compose -f docker-compose.prod.yml logs -f app
+
+# Ver estado de los contenedores
+docker compose -f docker-compose.prod.yml ps
+```
+
+### Respaldo
+
+El script `scripts/respaldo.sh` respalda la base de datos y los PDFs.
+Conserva los últimos 30 días y elimina los anteriores.
+
+```bash
+# Respaldo manual
+cd /ruta/al/SGO
+source .env
+./scripts/respaldo.sh /opt/sgo/respaldos
+
+# Agendar respaldo diario a las 2:00 AM con cron
+# Ejecutar: crontab -e
+# Agregar la línea:
+0 2 * * * cd /ruta/al/SGO && source .env && ./scripts/respaldo.sh /opt/sgo/respaldos >> /var/log/sgo-respaldo.log 2>&1
+```
+
+### Restaurar desde un respaldo
+
+```bash
+# 1. Detener la aplicación (la BD debe seguir corriendo)
+docker compose -f docker-compose.prod.yml stop app
+
+# 2. Restaurar la base de datos
+gunzip -c /opt/sgo/respaldos/sgo-db-2026-07-13_0200.sql.gz \
+    | docker compose -f docker-compose.prod.yml exec -T db \
+        psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+
+# 3. Restaurar los PDFs
+docker compose -f docker-compose.prod.yml run --rm -v sgo-almacen:/data/almacen app \
+    tar xzf - -C /data/almacen < /opt/sgo/respaldos/sgo-archivos-2026-07-13_0200.tar.gz
+
+# 4. Levantar la aplicación
+docker compose -f docker-compose.prod.yml up -d app
+```
+
+### Actualizar a una versión nueva
+
+```bash
+cd /ruta/al/SGO
+
+# 1. Respaldar antes de actualizar
+source .env
+./scripts/respaldo.sh /opt/sgo/respaldos
+
+# 2. Obtener la nueva versión
+git pull origin main
+
+# 3. Reconstruir y reiniciar
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Flyway aplicará las migraciones nuevas automáticamente al arrancar.
+# Si algo falla, restaurar desde el respaldo del paso 1.
+```
